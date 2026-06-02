@@ -28,19 +28,6 @@ function resolveBundledOverlayFile(): string | undefined {
     return undefined;
   }
 }
-
-/** Read the bundled overlay JSON synchronously, or undefined if unavailable. */
-function readBundledOverlay(): ModelsDevPayload | undefined {
-  const file = resolveBundledOverlayFile();
-  if (!file) return undefined;
-  try {
-    const raw = readFileSync(file, 'utf-8');
-    const parsed = JSON.parse(raw) as ModelsDevPayload;
-    return Object.keys(parsed).length > 0 ? parsed : undefined;
-  } catch {
-    return undefined;
-  }
-}
 import {
   type Config,
   DefaultLogger,
@@ -88,6 +75,19 @@ function resolveBundledSkillsDir(): string | undefined {
     const req = createRequire(import.meta.url);
     const corePkg = req.resolve('@wrongstack/core/package.json');
     return path.join(path.dirname(corePkg), 'skills');
+  } catch {
+    return undefined;
+  }
+}
+
+/** Read the bundled overlay JSON synchronously, or undefined if unavailable. */
+function readBundledOverlay(): ModelsDevPayload | undefined {
+  const file = resolveBundledOverlayFile();
+  if (!file) return undefined;
+  try {
+    const raw = readFileSync(file, 'utf-8');
+    const parsed = JSON.parse(raw) as ModelsDevPayload;
+    return Object.keys(parsed).length > 0 ? parsed : undefined;
   } catch {
     return undefined;
   }

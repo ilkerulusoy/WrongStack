@@ -9,8 +9,7 @@ import type {
 } from '@wrongstack/core';
 import { AnthropicProvider } from './anthropic.js';
 import { GoogleProvider } from './google.js';
-import { KiroProvider } from './kiro/index.js';
-import { getKiroCliToken } from './kiro/kiro-cli.js';
+import { kiroProviderFactory } from './kiro/index.js';
 import { OpenAICompatibleProvider } from './openai-compatible.js';
 import { OpenAIProvider } from './openai.js';
 
@@ -58,6 +57,17 @@ export interface BuildFactoriesOptions {
 }
 
 /**
+ * Providers WrongStack ships with a hand-written transport instead of a
+ * catalog-driven HTTP family — they speak a non-standard wire format. They are
+ * still present in the catalog (so they show up in the picker) but the
+ * catalog's generic factory is skipped in favor of the static one here.
+ * Add new such providers to this list; `buildProviderFactoriesFromRegistry`
+ * needs no per-id changes.
+ */
+const STATIC_FACTORIES: ProviderFactory[] = [kiroProviderFactory];
+const STATIC_FACTORY_IDS = new Set(STATIC_FACTORIES.map((f) => f.type));
+
+/**
  * Build one ProviderFactory per provider known to models.dev. The factory's
  * `create(cfg)` resolves the wire-family at construction time and returns the
  * matching transport. Unsupported families return a stub that throws when
@@ -75,10 +85,10 @@ export async function buildProviderFactoriesFromRegistry(
       unsupported.push(p);
       continue;
     }
-    // kiro speaks the Q wire format, not Anthropic's HTTP API — it is in the
-    // catalog (so it shows up in the picker) but must use the static kiro
-    // factory below, not the generic anthropic transport.
-    if (p.id === 'kiro') continue;
+    // Providers with a static hand-written transport (see STATIC_FACTORIES)
+    // are in the catalog for picker visibility but must not use the generic
+    // catalog-driven HTTP factory.
+    if (STATIC_FACTORY_IDS.has(p.id)) continue;
     factories.push({
       type: p.id,
       family: p.family,
@@ -100,16 +110,8 @@ export async function buildProviderFactoriesFromRegistry(
       }),
   });
 
-  // Kiro (AWS CodeWhisperer / Amazon Q). Not in models.dev — registered
-  // statically so users can select it after a Kiro login. The bearer token
-  // is passed through as the apiKey.
-  factories.push({
-    type: 'kiro',
-    // Kiro is Anthropic-family on the inside (Claude models dominate the
-    // catalog) so the agent's tool-format routing treats it correctly.
-    family: 'anthropic',
-    create: (cfg) => makeKiroProvider(cfg),
-  });
+  // Static transports for providers not (cleanly) catalog-driven, e.g. Kiro.
+  factories.push(...STATIC_FACTORIES);
 
   if (unsupported.length > 0 && opts.log) {
     // Debug-only: the user already knows their plan; only surface when
@@ -179,8 +181,10 @@ function makeProvider(p: ResolvedProvider, cfg: ProviderConfig): Provider {
  * Used for user-defined providers and offline operation.
  */
 export function makeProviderFromConfig(id: string, cfg: ProviderConfig): Provider {
-  if (id === 'kiro' || cfg.type === 'kiro') {
-    return makeKiroProvider(cfg);
+  // Static transports (e.g. kiro) own their own config-driven construction.
+  const staticFactory = STATIC_FACTORIES.find((f) => f.type === id || f.type === cfg.type);
+  if (staticFactory) {
+    return staticFactory.create(cfg);
   }
   if (!cfg.family) {
     throw new Error(
@@ -210,27 +214,4 @@ function readFromEnv(vars: string[]): string | undefined {
 function requireKey(cfg: ProviderConfig): string {
   if (cfg.apiKey) return cfg.apiKey;
   throw new Error('Provider config requires apiKey (or set the corresponding env var).');
-}
-
-function makeKiroProvider(cfg: ProviderConfig): Provider {
-  const profileArn =
-    typeof cfg.quirks?.profileArn === 'string' ? (cfg.quirks.profileArn as string) : undefined;
-
-  // Prefer an explicit token (config or env); otherwise read it straight from
-  // the local kiro-cli login so a logged-in user needs no extra setup.
-  const explicit = cfg.apiKey ?? readFromEnv(cfg.envVars ?? ['KIRO_ACCESS_TOKEN']);
-  if (explicit) {
-    return new KiroProvider({ apiKey: explicit, baseUrl: cfg.baseUrl, profileArn });
-  }
-  const cli = getKiroCliToken();
-  if (cli) {
-    return new KiroProvider({
-      apiKey: cli.accessToken,
-      baseUrl: cfg.baseUrl ?? `https://q.${cli.region}.amazonaws.com/generateAssistantResponse`,
-      profileArn: profileArn ?? cli.profileArn,
-    });
-  }
-  throw new Error(
-    'Provider "kiro" requires a bearer access token. Log in with `kiro-cli`, set KIRO_ACCESS_TOKEN, or set apiKey in config.',
-  );
 }

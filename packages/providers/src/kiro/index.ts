@@ -7,12 +7,22 @@
  * into canonical `StreamEvent`s.
  */
 
-import type { Capabilities, Request, StreamEvent, StopReason, Usage } from '@wrongstack/core';
+import type {
+  Capabilities,
+  Provider,
+  ProviderConfig,
+  ProviderFactory,
+  Request,
+  StreamEvent,
+  StopReason,
+  Usage,
+} from '@wrongstack/core';
 import { ProviderError } from '@wrongstack/core';
 import { parseToolInput } from '../_tool-input.js';
 import { capabilitiesForFamily } from '../family-capabilities.js';
 import { WireAdapter } from '../wire-adapter.js';
 import { parseKiroEvents } from './event-parser.js';
+import { getKiroCliToken } from './kiro-cli.js';
 import { resolveKiroModel } from './models.js';
 import { buildKiroRequest } from './transform.js';
 
@@ -231,3 +241,49 @@ async function* parseKiroStream(
   stopReason = emittedToolCalls > 0 ? 'tool_use' : 'end_turn';
   yield { type: 'message_stop', stopReason, usage };
 }
+
+function readFromEnv(vars: string[]): string | undefined {
+  for (const v of vars) {
+    const val = process.env[v];
+    if (val) return val;
+  }
+  return undefined;
+}
+
+/**
+ * Build a KiroProvider from a ProviderConfig. Prefers an explicit token
+ * (config or env); otherwise reads it straight from the local kiro-cli login
+ * so a logged-in user needs no extra setup.
+ */
+export function makeKiroProvider(cfg: ProviderConfig): Provider {
+  const profileArn =
+    typeof cfg.quirks?.profileArn === 'string' ? (cfg.quirks.profileArn as string) : undefined;
+
+  const explicit = cfg.apiKey ?? readFromEnv(cfg.envVars ?? ['KIRO_ACCESS_TOKEN']);
+  if (explicit) {
+    return new KiroProvider({ apiKey: explicit, baseUrl: cfg.baseUrl, profileArn });
+  }
+  const cli = getKiroCliToken();
+  if (cli) {
+    return new KiroProvider({
+      apiKey: cli.accessToken,
+      baseUrl: cfg.baseUrl ?? `https://q.${cli.region}.amazonaws.com/generateAssistantResponse`,
+      profileArn: profileArn ?? cli.profileArn,
+    });
+  }
+  throw new Error(
+    'Provider "kiro" requires a bearer access token. Log in with `kiro-cli`, set KIRO_ACCESS_TOKEN, or set apiKey in config.',
+  );
+}
+
+/**
+ * Static ProviderFactory for Kiro. Registered alongside the catalog-driven
+ * factories: Kiro speaks the Q Event-Stream wire format (not Anthropic HTTP),
+ * but is `anthropic`-family for capabilities, picker grouping, and tool-format
+ * routing — Claude models dominate its catalog.
+ */
+export const kiroProviderFactory: ProviderFactory = {
+  type: 'kiro',
+  family: 'anthropic',
+  create: (cfg) => makeKiroProvider(cfg as ProviderConfig),
+};
