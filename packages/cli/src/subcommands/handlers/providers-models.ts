@@ -11,14 +11,15 @@ export const providersCmd: SubcommandHandler = async (args, deps) => {
       openai: [],
       'openai-compatible': [],
       google: [],
+      kiro: [],
       unsupported: [],
     };
     for (const p of all) byFamily[p.family].push(p);
     const families: WireFamily[] = showUnsupported
       ? ['unsupported']
       : showAll
-        ? ['anthropic', 'openai', 'google', 'openai-compatible', 'unsupported']
-        : ['anthropic', 'openai', 'google', 'openai-compatible'];
+        ? ['anthropic', 'openai', 'google', 'openai-compatible', 'kiro', 'unsupported']
+        : ['anthropic', 'openai', 'google', 'openai-compatible', 'kiro'];
     for (const family of families) {
       const list = byFamily[family];
       if (list.length === 0) continue;

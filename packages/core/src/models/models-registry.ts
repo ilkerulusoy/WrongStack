@@ -77,7 +77,10 @@ const FAMILY_BY_NPM: Record<string, WireFamily> = {
   '@ai-sdk/google': 'google',
 };
 
-export function classifyFamily(npm: string | undefined): WireFamily {
+export function classifyFamily(npm: string | undefined, id?: string): WireFamily {
+  // kiro has a hand-written non-HTTP transport, keyed by id (its catalog npm
+  // names a sibling SDK only for grouping/capability purposes).
+  if (id === 'kiro') return 'kiro';
   if (!npm) return 'unsupported';
   return FAMILY_BY_NPM[npm] ?? 'unsupported';
 }
@@ -319,7 +322,7 @@ export class DefaultModelsRegistry implements ModelsRegistry {
     return {
       id: p.id,
       name: p.name,
-      family: classifyFamily(p.npm),
+      family: classifyFamily(p.npm, p.id),
       apiBase: p.api,
       envVars: p.env ?? [],
       doc: p.doc,

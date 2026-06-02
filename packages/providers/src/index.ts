@@ -9,7 +9,7 @@ import type {
 } from '@wrongstack/core';
 import { AnthropicProvider } from './anthropic.js';
 import { GoogleProvider } from './google.js';
-import { kiroProviderFactory } from './kiro/index.js';
+import { makeKiroProvider } from './kiro/index.js';
 import { OpenAICompatibleProvider } from './openai-compatible.js';
 import { OpenAIProvider } from './openai.js';
 
@@ -57,17 +57,6 @@ export interface BuildFactoriesOptions {
 }
 
 /**
- * Providers WrongStack ships with a hand-written transport instead of a
- * catalog-driven HTTP family — they speak a non-standard wire format. They are
- * still present in the catalog (so they show up in the picker) but the
- * catalog's generic factory is skipped in favor of the static one here.
- * Add new such providers to this list; `buildProviderFactoriesFromRegistry`
- * needs no per-id changes.
- */
-const STATIC_FACTORIES: ProviderFactory[] = [kiroProviderFactory];
-const STATIC_FACTORY_IDS = new Set(STATIC_FACTORIES.map((f) => f.type));
-
-/**
  * Build one ProviderFactory per provider known to models.dev. The factory's
  * `create(cfg)` resolves the wire-family at construction time and returns the
  * matching transport. Unsupported families return a stub that throws when
@@ -85,10 +74,6 @@ export async function buildProviderFactoriesFromRegistry(
       unsupported.push(p);
       continue;
     }
-    // Providers with a static hand-written transport (see STATIC_FACTORIES)
-    // are in the catalog for picker visibility but must not use the generic
-    // catalog-driven HTTP factory.
-    if (STATIC_FACTORY_IDS.has(p.id)) continue;
     factories.push({
       type: p.id,
       family: p.family,
@@ -110,9 +95,6 @@ export async function buildProviderFactoriesFromRegistry(
       }),
   });
 
-  // Static transports for providers not (cleanly) catalog-driven, e.g. Kiro.
-  factories.push(...STATIC_FACTORIES);
-
   if (unsupported.length > 0 && opts.log) {
     // Debug-only: the user already knows their plan; only surface when
     // troubleshooting why a specific provider isn't selectable.
@@ -129,6 +111,9 @@ function makeProvider(p: ResolvedProvider, cfg: ProviderConfig): Provider {
   // Config overrides the catalog. This is the path that lets users wire
   // up internal proxies / self-hosted endpoints without needing models.dev.
   const family: WireFamily = cfg.family ?? p.family;
+  // Kiro owns its own token discovery (config / env / kiro-cli login), so it
+  // bypasses the generic apiKey requirement below.
+  if (family === 'kiro') return makeKiroProvider(cfg);
   const envVars = cfg.envVars && cfg.envVars.length > 0 ? cfg.envVars : p.envVars;
   const apiKey = cfg.apiKey ?? readFromEnv(envVars);
   if (!apiKey && family !== 'unsupported') {
@@ -181,10 +166,10 @@ function makeProvider(p: ResolvedProvider, cfg: ProviderConfig): Provider {
  * Used for user-defined providers and offline operation.
  */
 export function makeProviderFromConfig(id: string, cfg: ProviderConfig): Provider {
-  // Static transports (e.g. kiro) own their own config-driven construction.
-  const staticFactory = STATIC_FACTORIES.find((f) => f.type === id || f.type === cfg.type);
-  if (staticFactory) {
-    return staticFactory.create(cfg);
+  // Kiro speaks a non-HTTP wire format and discovers its own token; it has no
+  // catalog dependency, so resolve it directly from id/type/family.
+  if (id === 'kiro' || cfg.type === 'kiro' || cfg.family === 'kiro') {
+    return makeKiroProvider(cfg);
   }
   if (!cfg.family) {
     throw new Error(

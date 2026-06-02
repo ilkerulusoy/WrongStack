@@ -184,7 +184,7 @@ export async function runPicker(deps: {
   // Build a flat numbered list (family → providers). Track which entry
   // matches the current default so we can highlight + accept Enter.
   const ordered: Array<{ provider: ResolvedProvider; index: number }> = [];
-  const familyOrder = ['anthropic', 'openai', 'google', 'openai-compatible'];
+  const familyOrder = ['anthropic', 'openai', 'google', 'openai-compatible', 'kiro'];
   let idx = 1;
   let defaultIdx: number | undefined;
   renderer.write('\n');

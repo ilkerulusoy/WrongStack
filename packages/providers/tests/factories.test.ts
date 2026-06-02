@@ -61,36 +61,16 @@ describe('buildProviderFactoriesFromRegistry', () => {
     expect(types).toContain('google');
     expect(types).toContain('mistral');
     expect(types).toContain('openai-compatible');
-    expect(types).toContain('kiro');
   });
 
-  it('kiro factory builds a KiroProvider from a bearer token', async () => {
-    const registry = makeRegistry();
-    const factories = await buildProviderFactoriesFromRegistry({ registry });
-    const f = factories.find((x) => x.type === 'kiro');
-    const provider = f!.create({ type: 'kiro', apiKey: 'kiro-bearer' });
-    expect(provider.id).toBe('kiro');
-  });
-
-  it('makeProviderFromConfig builds kiro without a models.dev family', () => {
+  it('makeProviderFromConfig builds kiro from a bearer token (no catalog needed)', () => {
     const provider = makeProviderFromConfig('kiro', { type: 'kiro', apiKey: 'kiro-bearer' });
     expect(provider.id).toBe('kiro');
   });
 
-  it('kiro throws a clear error when no token is available anywhere', async () => {
-    delete process.env['KIRO_ACCESS_TOKEN'];
-    const registry = makeRegistry();
-    const factories = await buildProviderFactoriesFromRegistry({ registry });
-    const f = factories.find((x) => x.type === 'kiro');
-    // With an explicit (empty) apiKey and no env token, the only remaining
-    // source is a local kiro-cli login. On a machine without one this throws;
-    // when kiro-cli IS logged in the factory succeeds — accept both.
-    try {
-      const provider = f!.create({ type: 'kiro', envVars: ['__WSTACK_NO_SUCH_ENV__'] });
-      expect(provider.id).toBe('kiro');
-    } catch (err) {
-      expect(String(err)).toMatch(/bearer access token/);
-    }
+  it('makeProviderFromConfig builds kiro when only family is kiro', () => {
+    const provider = makeProviderFromConfig('kiro-alias', { type: 'kiro-alias', family: 'kiro', apiKey: 'b' });
+    expect(provider.id).toBe('kiro');
   });
 
   it('anthropic factory builds an AnthropicProvider', async () => {

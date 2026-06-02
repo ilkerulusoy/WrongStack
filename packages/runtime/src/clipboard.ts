@@ -37,6 +37,13 @@ async function readWindows(): Promise<ClipboardImage | null> {
 }
 
 async function readDarwin(): Promise<ClipboardImage | null> {
+  // Guard: only attempt the PNG coercion when the clipboard actually holds an
+  // image. Coercing a text/empty clipboard via `as «class PNGf»` raises an
+  // AppleScript error and can perturb the Apple Events / pasteboard subsystem
+  // (observed restarting Finder). `clipboard info` is side-effect free.
+  const info = await runCmd('osascript', ['-e', 'clipboard info']);
+  if (!info || !info.includes('PNGf')) return null;
+
   const tmp = path.join(os.tmpdir(), `wstack-clip-${Date.now()}.png`);
   const script = [
     'try',
