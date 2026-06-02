@@ -17,7 +17,7 @@ WrongStack is a terminal AI coding agent built in TypeScript. It runs an LLM tha
 
 ```
 packages/core/        — Kernel: Container, Pipeline, EventBus, RunController, Context
-packages/providers/  — Anthropic, OpenAI, Google, OpenAI-compatible adapters
+packages/providers/  — Anthropic, OpenAI, Google, OpenAI-compatible, Kiro adapters
 packages/tools/      — Builtin tools: read, write, bash, exec, git, grep, glob, ...
 packages/mcp/         — MCP client + registry + stdio/SSE/streamable-http transports
 packages/plug-lsp/   — LSP bridge (slash commands: /lsp:start, /lsp:diag, /lsp:goto)
@@ -348,6 +348,7 @@ See `docs/skills.md` for the full authoring guide.
 - **`tool.executed` events** are truncated before writing to the session log to avoid flooding — truncation threshold is configurable
 - **Secret encryption** — API keys in `~/.wrongstack/config.json` are encrypted with a per-machine key derived from `~/.wrongstack/.key` using `DefaultSecretVault`
 - **`runText` in slash command results** — when a slash command returns `{ runText: "..." }`, the REPL injects that text as the next user turn (used by `/goal`, `/sdd`, `/autonomy` for steering)
+- **Kiro provider** (`packages/providers/src/kiro/`) — speaks the AWS CodeWhisperer / Amazon Q `GenerateAssistantResponse` wire format. It is NOT in the models.dev catalog, so it is registered as a static `kiro` factory in `buildProviderFactoriesFromRegistry` and intercepted in `makeProviderFromConfig`. The bearer access token from a Kiro login is passed through as `apiKey` (or `KIRO_ACCESS_TOKEN`). The streaming body is the binary Event Stream protocol (not SSE) — parsed by `kiro/event-parser.ts`. Model ids use dashes for versions (`claude-opus-4-6`) and are converted to dots (`claude-opus-4.6`) for the API. Select it via config `provider: "kiro"` + `providers.kiro = { type: "kiro", apiKey: "<bearer>" }`.
 
 ## Verification checklist
 

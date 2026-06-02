@@ -1,1 +1,20 @@
-{}
+{
+  "kiro": {
+    "id": "kiro",
+    "name": "Kiro (AWS CodeWhisperer / Amazon Q)",
+    "npm": "@ai-sdk/anthropic",
+    "env": ["KIRO_ACCESS_TOKEN"],
+    "api": "https://q.us-east-1.amazonaws.com/generateAssistantResponse",
+    "models": {
+      "claude-opus-4-8": { "id": "claude-opus-4-8", "name": "Claude Opus 4.8", "reasoning": true, "tool_call": true, "modalities": { "input": ["text", "image"], "output": ["text"] }, "cost": { "input": 0, "output": 0 }, "limit": { "context": 1000000, "output": 128000 } },
+      "claude-opus-4-6": { "id": "claude-opus-4-6", "name": "Claude Opus 4.6", "reasoning": true, "tool_call": true, "modalities": { "input": ["text", "image"], "output": ["text"] }, "cost": { "input": 0, "output": 0 }, "limit": { "context": 1000000, "output": 32768 } },
+      "claude-sonnet-4-6": { "id": "claude-sonnet-4-6", "name": "Claude Sonnet 4.6", "reasoning": true, "tool_call": true, "modalities": { "input": ["text", "image"], "output": ["text"] }, "cost": { "input": 0, "output": 0 }, "limit": { "context": 1000000, "output": 65536 } },
+      "claude-sonnet-4-5": { "id": "claude-sonnet-4-5", "name": "Claude Sonnet 4.5", "reasoning": true, "tool_call": true, "modalities": { "input": ["text", "image"], "output": ["text"] }, "cost": { "input": 0, "output": 0 }, "limit": { "context": 200000, "output": 65536 } },
+      "claude-haiku-4-5": { "id": "claude-haiku-4-5", "name": "Claude Haiku 4.5", "reasoning": false, "tool_call": true, "modalities": { "input": ["text", "image"], "output": ["text"] }, "cost": { "input": 0, "output": 0 }, "limit": { "context": 200000, "output": 65536 } },
+      "deepseek-3-2": { "id": "deepseek-3-2", "name": "DeepSeek 3.2", "reasoning": true, "tool_call": true, "modalities": { "input": ["text"], "output": ["text"] }, "cost": { "input": 0, "output": 0 }, "limit": { "context": 164000, "output": 8192 } },
+      "minimax-m2-5": { "id": "minimax-m2-5", "name": "MiniMax M2.5", "reasoning": false, "tool_call": true, "modalities": { "input": ["text"], "output": ["text"] }, "cost": { "input": 0, "output": 0 }, "limit": { "context": 196000, "output": 8192 } },
+      "qwen3-coder-next": { "id": "qwen3-coder-next", "name": "Qwen3 Coder Next", "reasoning": true, "tool_call": true, "modalities": { "input": ["text"], "output": ["text"] }, "cost": { "input": 0, "output": 0 }, "limit": { "context": 256000, "output": 8192 } },
+      "auto": { "id": "auto", "name": "Auto", "reasoning": true, "tool_call": true, "modalities": { "input": ["text", "image"], "output": ["text"] }, "cost": { "input": 0, "output": 0 }, "limit": { "context": 1000000, "output": 65536 } }
+    }
+  }
+}

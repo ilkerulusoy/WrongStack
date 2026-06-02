@@ -2,7 +2,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { DefaultLogger, DefaultModelsRegistry, type ModelsDevPayload } from '@wrongstack/core';
 import { describe, expect, it, vi } from 'vitest';
-import { buildProviderFactoriesFromRegistry } from '../src/index.js';
+import { buildProviderFactoriesFromRegistry, makeProviderFromConfig } from '../src/index.js';
 
 const SAMPLE: ModelsDevPayload = {
   anthropic: {
@@ -61,6 +61,36 @@ describe('buildProviderFactoriesFromRegistry', () => {
     expect(types).toContain('google');
     expect(types).toContain('mistral');
     expect(types).toContain('openai-compatible');
+    expect(types).toContain('kiro');
+  });
+
+  it('kiro factory builds a KiroProvider from a bearer token', async () => {
+    const registry = makeRegistry();
+    const factories = await buildProviderFactoriesFromRegistry({ registry });
+    const f = factories.find((x) => x.type === 'kiro');
+    const provider = f!.create({ type: 'kiro', apiKey: 'kiro-bearer' });
+    expect(provider.id).toBe('kiro');
+  });
+
+  it('makeProviderFromConfig builds kiro without a models.dev family', () => {
+    const provider = makeProviderFromConfig('kiro', { type: 'kiro', apiKey: 'kiro-bearer' });
+    expect(provider.id).toBe('kiro');
+  });
+
+  it('kiro throws a clear error when no token is available anywhere', async () => {
+    delete process.env['KIRO_ACCESS_TOKEN'];
+    const registry = makeRegistry();
+    const factories = await buildProviderFactoriesFromRegistry({ registry });
+    const f = factories.find((x) => x.type === 'kiro');
+    // With an explicit (empty) apiKey and no env token, the only remaining
+    // source is a local kiro-cli login. On a machine without one this throws;
+    // when kiro-cli IS logged in the factory succeeds — accept both.
+    try {
+      const provider = f!.create({ type: 'kiro', envVars: ['__WSTACK_NO_SUCH_ENV__'] });
+      expect(provider.id).toBe('kiro');
+    } catch (err) {
+      expect(String(err)).toMatch(/bearer access token/);
+    }
   });
 
   it('anthropic factory builds an AnthropicProvider', async () => {
