@@ -9,6 +9,7 @@ import type {
 } from '@wrongstack/core';
 import { AnthropicProvider } from './anthropic.js';
 import { GoogleProvider } from './google.js';
+import { makeKiroProvider } from './kiro/index.js';
 import { OpenAICompatibleProvider } from './openai-compatible.js';
 import { OpenAIProvider } from './openai.js';
 
@@ -20,6 +21,8 @@ export {
   type CompatibilityQuirks,
 } from './openai-compatible.js';
 export { GoogleProvider, type GoogleProviderOptions } from './google.js';
+export { KiroProvider, type KiroProviderOptions } from './kiro/index.js';
+export { KIRO_MODELS, kiroModelsDev, resolveKiroModel } from './kiro/models.js';
 export { WireAdapter } from './wire-adapter.js';
 export {
   WireFormatProvider,
@@ -108,6 +111,9 @@ function makeProvider(p: ResolvedProvider, cfg: ProviderConfig): Provider {
   // Config overrides the catalog. This is the path that lets users wire
   // up internal proxies / self-hosted endpoints without needing models.dev.
   const family: WireFamily = cfg.family ?? p.family;
+  // Kiro owns its own token discovery (config / env / kiro-cli login), so it
+  // bypasses the generic apiKey requirement below.
+  if (family === 'kiro') return makeKiroProvider(cfg);
   const envVars = cfg.envVars && cfg.envVars.length > 0 ? cfg.envVars : p.envVars;
   const apiKey = cfg.apiKey ?? readFromEnv(envVars);
   if (!apiKey && family !== 'unsupported') {
@@ -160,6 +166,11 @@ function makeProvider(p: ResolvedProvider, cfg: ProviderConfig): Provider {
  * Used for user-defined providers and offline operation.
  */
 export function makeProviderFromConfig(id: string, cfg: ProviderConfig): Provider {
+  // Kiro speaks a non-HTTP wire format and discovers its own token; it has no
+  // catalog dependency, so resolve it directly from id/type/family.
+  if (id === 'kiro' || cfg.type === 'kiro' || cfg.family === 'kiro') {
+    return makeKiroProvider(cfg);
+  }
   if (!cfg.family) {
     throw new Error(
       `Provider "${id}" needs an explicit family ("anthropic" | "openai" | "openai-compatible" | "google") when not in the models.dev catalog.`,

@@ -45,6 +45,17 @@ export const CAPABILITIES_BY_FAMILY: Record<WireFamily, Capabilities> = {
     maxContext: 1_000_000,
     cacheControl: 'none',
   },
+  kiro: {
+    tools: true,
+    parallelTools: true,
+    vision: true,
+    streaming: true,
+    promptCache: false,
+    systemPrompt: true,
+    jsonMode: false,
+    maxContext: 1_000_000,
+    cacheControl: 'none',
+  },
   unsupported: {
     tools: false,
     parallelTools: false,

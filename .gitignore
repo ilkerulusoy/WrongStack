@@ -39,6 +39,8 @@ AGENTS.md
 .claude/
 .editorconfig
 .antigravitycli/
+.gsd/
+.bg-shell/
 
 # ---------------------------------------------------------------------------
 # Repo-root scratch / debug / test-output files.

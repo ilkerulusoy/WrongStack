@@ -1,4 +1,5 @@
 import { createRequire } from 'node:module';
+import { readFileSync } from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 /**
@@ -31,6 +32,7 @@ import {
   type Config,
   DefaultLogger,
   DefaultModelsRegistry,
+  type ModelsDevPayload,
   type ModelsRegistry,
   type SecretVault,
   ToolRegistry,
@@ -73,6 +75,19 @@ function resolveBundledSkillsDir(): string | undefined {
     const req = createRequire(import.meta.url);
     const corePkg = req.resolve('@wrongstack/core/package.json');
     return path.join(path.dirname(corePkg), 'skills');
+  } catch {
+    return undefined;
+  }
+}
+
+/** Read the bundled overlay JSON synchronously, or undefined if unavailable. */
+function readBundledOverlay(): ModelsDevPayload | undefined {
+  const file = resolveBundledOverlayFile();
+  if (!file) return undefined;
+  try {
+    const raw = readFileSync(file, 'utf-8');
+    const parsed = JSON.parse(raw) as ModelsDevPayload;
+    return Object.keys(parsed).length > 0 ? parsed : undefined;
   } catch {
     return undefined;
   }
@@ -121,7 +136,10 @@ export async function boot(argv: string[]): Promise<BootContext | number> {
     cacheFile: wpaths.modelsCache,
     ttlSeconds: 24 * 3600,
     // Curated overlay merged on top of models.dev: fetched from GitHub raw for
-    // freshness, with the bundled file as the offline floor.
+    // freshness, with the bundled file as the offline floor. The bundled file
+    // is ALSO passed as the in-memory `overlay` so locally-added providers
+    // (e.g. kiro) are always present even when the GitHub overlay lags.
+    overlay: readBundledOverlay(),
     overlayUrl: GITHUB_PROVIDERS_OVERLAY_URL,
     overlayFile: resolveBundledOverlayFile(),
     overlayCacheFile: wpaths.modelsOverlayCache,

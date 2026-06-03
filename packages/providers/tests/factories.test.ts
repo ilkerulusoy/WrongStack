@@ -2,7 +2,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { DefaultLogger, DefaultModelsRegistry, type ModelsDevPayload } from '@wrongstack/core';
 import { describe, expect, it, vi } from 'vitest';
-import { buildProviderFactoriesFromRegistry } from '../src/index.js';
+import { buildProviderFactoriesFromRegistry, makeProviderFromConfig } from '../src/index.js';
 
 const SAMPLE: ModelsDevPayload = {
   anthropic: {
@@ -61,6 +61,16 @@ describe('buildProviderFactoriesFromRegistry', () => {
     expect(types).toContain('google');
     expect(types).toContain('mistral');
     expect(types).toContain('openai-compatible');
+  });
+
+  it('makeProviderFromConfig builds kiro from a bearer token (no catalog needed)', () => {
+    const provider = makeProviderFromConfig('kiro', { type: 'kiro', apiKey: 'kiro-bearer' });
+    expect(provider.id).toBe('kiro');
+  });
+
+  it('makeProviderFromConfig builds kiro when only family is kiro', () => {
+    const provider = makeProviderFromConfig('kiro-alias', { type: 'kiro-alias', family: 'kiro', apiKey: 'b' });
+    expect(provider.id).toBe('kiro');
   });
 
   it('anthropic factory builds an AnthropicProvider', async () => {

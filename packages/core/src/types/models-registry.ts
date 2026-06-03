@@ -53,7 +53,13 @@ export type ModelsDevPayload = Record<string, ModelsDevProvider>;
  * Canonical wire-format families WrongStack knows how to speak natively.
  * Used by the provider registry to pick a transport.
  */
-export type WireFamily = 'anthropic' | 'openai' | 'openai-compatible' | 'google' | 'unsupported';
+export type WireFamily =
+  | 'anthropic'
+  | 'openai'
+  | 'openai-compatible'
+  | 'google'
+  | 'kiro'
+  | 'unsupported';
 
 export interface ResolvedProvider {
   id: string;
