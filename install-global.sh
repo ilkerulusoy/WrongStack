@@ -10,4 +10,7 @@ rm -rf /tmp/wrongstack-dist
 corepack pnpm --filter wrongstack --legacy deploy --prod /tmp/wrongstack-dist
 npm install -g /tmp/wrongstack-dist
 
+# Güvence: bin dosyasında execute bit'i garanti et (npm bazen korumaz)
+chmod +x "$(npm root -g)/wrongstack/src/index.js" 2>/dev/null || true
+
 echo "✓ Kuruldu. Çalıştır: wstack  (veya wrongstack)"
